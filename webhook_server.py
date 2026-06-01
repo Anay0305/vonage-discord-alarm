@@ -20,6 +20,8 @@ async def speech_webhook(request: Request, alarm_id: int):
     """Vonage calls this with speech recognition results after the input action."""
     data = await request.json()
 
+    print(f"[Alarm {alarm_id}] Raw webhook payload: {data}")
+
     # Check DTMF (any key press = dismissed)
     dtmf = data.get("dtmf", {})
     dtmf_tones = dtmf.get("tones", "")

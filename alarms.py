@@ -177,8 +177,8 @@ class AlarmManager:
             ncco.append({
                 "action": "stream",
                 "streamUrl": [audio_url],
-                "loop": 5,  # Play 5 times
-                "bargeIn": True,
+                "loop": 3,
+                "bargeIn": False,
             })
         else:
             # Fallback to TTS
@@ -187,8 +187,8 @@ class AlarmManager:
                 "action": "talk",
                 "text": text,
                 "language": config.ALARM_LANGUAGE,
-                "loop": 5,
-                "bargeIn": True,
+                "loop": 3,
+                "bargeIn": False,
             })
 
         # Listen for speech or DTMF
