@@ -45,7 +45,7 @@ WAKE_KEYWORDS = [
 
 # --- Timing ---
 PREALARM_MINUTES = 5           # Start calling this many minutes before alarm time
-RETRY_INTERVAL_SECONDS = 100   # Retry call this long after unanswered/no-response
+RETRY_INTERVAL_SECONDS = 60    # Retry call this long after unanswered/no-response
 MAX_RETRIES = 20               # Give up after this many failed attempts
 CALL_RINGING_TIMEOUT = 60      # Seconds to wait for answer before Vonage hangs up (max 120)
 CALL_MAX_DURATION = 180        # Max answered call length in seconds

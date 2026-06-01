@@ -259,12 +259,11 @@ class AlarmManager:
         if alarm.status == AlarmStatus.DISMISSED:
             return
 
-        # Schedule retry for unanswered/failed calls
-        if status in ["unanswered", "failed", "timeout", "busy", "rejected"]:
-            alarm.next_call_time = datetime.now(ZoneInfo(config.TIMEZONE)) + timedelta(
-                seconds=config.RETRY_INTERVAL_SECONDS
-            )
-            print(f"⏰ Retry scheduled for alarm {alarm_id} at {alarm.next_call_time}")
+        # Schedule retry whether the call was answered or not (retry until dismissed)
+        alarm.next_call_time = datetime.now(ZoneInfo(config.TIMEZONE)) + timedelta(
+            seconds=config.RETRY_INTERVAL_SECONDS
+        )
+        print(f"⏰ Retry scheduled for alarm {alarm_id} at {alarm.next_call_time}")
 
     def dismiss_alarm(self, alarm_id: int, call_uuid: str):
         """Mark alarm as dismissed and schedule follow-ups."""
