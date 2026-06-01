@@ -13,6 +13,30 @@ tree = app_commands.CommandTree(bot)
 alarm_group = app_commands.Group(name="alarm", description="Manage your alarms")
 
 
+def normalize_phone(phone: str) -> str:
+    """Normalize phone number: strip +, add country code if needed."""
+    if not phone:
+        return config.PHONE_NUMBER
+
+    # Strip + if present
+    phone = phone.lstrip("+")
+
+    # Remove any spaces/dashes
+    phone = phone.replace(" ", "").replace("-", "")
+
+    # If 10 digits (Indian mobile), prepend 91
+    if len(phone) == 10 and phone.isdigit():
+        return f"91{phone}"
+
+    # If 12 digits, assume first 2 are country code
+    if len(phone) == 12 and phone.isdigit():
+        return phone
+
+    # Otherwise return as-is (let Vonage reject if invalid)
+    return phone
+
+
+
 @bot.event
 async def on_ready():
     alarm_manager.set_discord_bot(bot)
@@ -60,11 +84,12 @@ async def alarm_set(interaction: discord.Interaction, time: str, phone: str = No
     call_time = target - timedelta(minutes=config.PREALARM_MINUTES)
     is_tomorrow = target.date() > now.date()
 
-    alarm = alarm_manager.add_alarm(target, phone_number=phone)
+    phone_normalized = normalize_phone(phone)
+    alarm = alarm_manager.add_alarm(target, phone_number=phone_normalized)
 
     when = "tomorrow" if is_tomorrow else "today"
     mins_until = int((call_time - now).total_seconds() / 60)
-    calling = phone or config.PHONE_NUMBER
+    calling = phone_normalized
 
     await interaction.response.send_message(
         f"⏰ **Alarm set!**\n"
@@ -131,18 +156,19 @@ async def alarm_call(interaction: discord.Interaction, phone: str = None):
     tz = ZoneInfo(config.TIMEZONE)
     now = datetime.now(tz)
 
+    phone_normalized = normalize_phone(phone)
+
     # Trigger immediately on next scheduler tick (10s)
     alarm = alarm_manager.add_alarm(
         target_time=now + timedelta(minutes=6),
-        phone_number=phone,
+        phone_number=phone_normalized,
         max_retries=1,       # call once and stop
         retry_interval=9999,
     )
 
-    calling = phone or config.PHONE_NUMBER
     await interaction.response.send_message(
         f"📞 **Calling now!**\n"
-        f"• Number: `+{calling}`\n"
+        f"• Number: `+{phone_normalized}`\n"
         f"• One call only — ID: `alarm_{alarm.id}`"
     )
 
@@ -156,16 +182,17 @@ async def alarm_test(interaction: discord.Interaction, phone: str = None, freque
     tz = ZoneInfo(config.TIMEZONE)
     now = datetime.now(tz)
 
+    phone_normalized = normalize_phone(phone)
+
     alarm = alarm_manager.add_alarm(
         target_time=now + timedelta(minutes=6),
-        phone_number=phone,
+        phone_number=phone_normalized,
         retry_interval=frequency,
     )
 
-    calling = phone or config.PHONE_NUMBER
     await interaction.response.send_message(
         f"🧪 **Test alarm started!**\n"
-        f"• Number: `+{calling}`\n"
+        f"• Number: `+{phone_normalized}`\n"
         f"• Retrying every **{frequency}s** until dismissed\n"
         f"• ID: `alarm_{alarm.id}`"
     )

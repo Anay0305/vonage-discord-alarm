@@ -177,7 +177,7 @@ class AlarmManager:
             ncco.append({
                 "action": "stream",
                 "streamUrl": [audio_url],
-                "loop": 3,
+                "loop": 2,
                 "bargeIn": False,
             })
         else:
