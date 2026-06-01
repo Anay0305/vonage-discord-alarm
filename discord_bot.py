@@ -125,17 +125,47 @@ async def alarm_cancel(interaction: discord.Interaction, alarm_id: int):
         )
 
 
-@alarm_group.command(name="test", description="Immediately trigger a test call")
-async def alarm_test(interaction: discord.Interaction):
+@alarm_group.command(name="call", description="Instant single test call right now")
+@app_commands.describe(phone="Phone number to call (optional, overrides default)")
+async def alarm_call(interaction: discord.Interaction, phone: str = None):
     tz = ZoneInfo(config.TIMEZONE)
     now = datetime.now(tz)
-    # Set alarm 6 minutes from now so it triggers in the next scheduler tick
-    target = now + timedelta(minutes=6)
 
-    alarm = alarm_manager.add_alarm(target)
+    # Trigger immediately on next scheduler tick (10s)
+    alarm = alarm_manager.add_alarm(
+        target_time=now + timedelta(minutes=6),
+        phone_number=phone,
+        max_retries=1,       # call once and stop
+        retry_interval=9999,
+    )
 
+    calling = phone or config.PHONE_NUMBER
     await interaction.response.send_message(
-        f"🧪 **Test alarm created!**\n"
-        f"You'll get a call in about 1 minute.\n"
-        f"ID: `alarm_{alarm.id}`"
+        f"📞 **Calling now!**\n"
+        f"• Number: `+{calling}`\n"
+        f"• One call only — ID: `alarm_{alarm.id}`"
+    )
+
+
+@alarm_group.command(name="test", description="Test alarm that repeats calls (like a real alarm)")
+@app_commands.describe(
+    phone="Phone number to call (optional, overrides default)",
+    frequency="Seconds between retries (default: 60)",
+)
+async def alarm_test(interaction: discord.Interaction, phone: str = None, frequency: int = 60):
+    tz = ZoneInfo(config.TIMEZONE)
+    now = datetime.now(tz)
+
+    alarm = alarm_manager.add_alarm(
+        target_time=now + timedelta(minutes=6),
+        phone_number=phone,
+        retry_interval=frequency,
+    )
+
+    calling = phone or config.PHONE_NUMBER
+    await interaction.response.send_message(
+        f"🧪 **Test alarm started!**\n"
+        f"• Number: `+{calling}`\n"
+        f"• Retrying every **{frequency}s** until dismissed\n"
+        f"• ID: `alarm_{alarm.id}`"
     )

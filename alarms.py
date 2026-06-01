@@ -31,6 +31,8 @@ class Alarm:
     active_call_uuid: Optional[str] = None
     retry_count: int = 0
     next_call_time: Optional[datetime] = None
+    max_retries: int = field(default_factory=lambda: config.MAX_RETRIES)
+    retry_interval: int = field(default_factory=lambda: config.RETRY_INTERVAL_SECONDS)
 
     # Follow-up tracking
     follow_ups_remaining: int = config.FOLLOW_UP_COUNT
@@ -98,7 +100,7 @@ class AlarmManager:
             elif alarm.status == AlarmStatus.RINGING:
                 # Retry logic for unanswered/no-response
                 if alarm.next_call_time and now >= alarm.next_call_time:
-                    if alarm.retry_count >= config.MAX_RETRIES:
+                    if alarm.retry_count >= alarm.max_retries:
                         print(f"⏰ Alarm {alarm.id} exceeded max retries. Giving up.")
                         alarm.status = AlarmStatus.COMPLETED
                         continue
@@ -222,12 +224,20 @@ class AlarmManager:
             print(f"❌ JWT generation failed: {e}")
             return None
 
-    def add_alarm(self, target_time: datetime, phone_number: Optional[str] = None) -> Alarm:
-        """Create a new alarm. Uses config.PHONE_NUMBER if phone_number not given."""
+    def add_alarm(
+        self,
+        target_time: datetime,
+        phone_number: Optional[str] = None,
+        max_retries: Optional[int] = None,
+        retry_interval: Optional[int] = None,
+    ) -> Alarm:
+        """Create a new alarm. Uses config defaults if optional params not given."""
         alarm = Alarm(
             id=self.next_id,
             target_time=target_time,
             phone_number=phone_number or config.PHONE_NUMBER,
+            max_retries=max_retries if max_retries is not None else config.MAX_RETRIES,
+            retry_interval=retry_interval if retry_interval is not None else config.RETRY_INTERVAL_SECONDS,
         )
         self.alarms[alarm.id] = alarm
         self.next_id += 1
@@ -261,7 +271,7 @@ class AlarmManager:
 
         # Schedule retry whether the call was answered or not (retry until dismissed)
         alarm.next_call_time = datetime.now(ZoneInfo(config.TIMEZONE)) + timedelta(
-            seconds=config.RETRY_INTERVAL_SECONDS
+            seconds=alarm.retry_interval
         )
         print(f"⏰ Retry scheduled for alarm {alarm_id} at {alarm.next_call_time}")
 
